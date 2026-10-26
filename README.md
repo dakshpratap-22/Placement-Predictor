@@ -63,7 +63,7 @@ python app.py
 | `python train_model.py` | Trains the model on `sample_data.csv`, prints metrics, saves `models/placement_model.joblib`. |
 | `python app.py` | Starts the website. |
 
-4. Open **http://127.0.0.1:5000** in your browser. Stop the server with `Ctrl + C`.
+4. Open **[http://127.0.0.1:5000](https://placement-predictor-rw05.onrender.com)** in your browser. Stop the server with `Ctrl + C`.
 
 > If PowerShell says *"running scripts is disabled"* when activating, run once:
 > `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` and try again (or use Command Prompt: `venv\Scripts\activate.bat`).
