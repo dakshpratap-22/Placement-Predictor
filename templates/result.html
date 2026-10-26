@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Prediction Result{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Prediction Result</h1>
+    <p>For {{ p.student_name }} &middot; Target role: {{ p.target_role }} &middot; Saved {{ p.created_at }}</p>
+  </div>
+
+  <div class="result-banner {{ 'placed' if pred.label == pos else 'not-placed' }}">
+    <div>
+      <small>Predicted outcome</small>
+      <h2>{{ pred.label }}</h2>
+    </div>
+    {% if pred.supports_probability %}
+    <div class="prob">
+      <small>Estimated probability of "Placed"</small>
+      <div class="num">{{ '%.1f' % (pred.probability_placed * 100) }}%</div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if pred.supports_probability %}
+  <div class="meter" style="margin-top:1rem" role="img" aria-label="Probability of Placed {{ '%.1f' % (pred.probability_placed * 100) }} percent">
+    <div style="width: {{ '%.1f' % (pred.probability_placed * 100) }}%"></div>
+  </div>
+  {% endif %}
+
+  <div class="disclaimer">
+    <strong>This is an estimate, not a guarantee.</strong> The model was trained on a <em>synthetic demonstration dataset</em>, so it does not reflect real hiring decisions. Many factors that affect real placements (interview performance, company requirements, market conditions) are not in the model.
+  </div>
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Student profile summary</h3>
+      <div class="table-wrap">
+      <table class="data">
+        <tr><th>Name</th><td>{{ p.student_name }}</td></tr>
+        <tr><th>CGPA</th><td>{{ p.cgpa }}</td></tr>
+        <tr><th>10th %</th><td>{{ p.tenth_pct }}</td></tr>
+        <tr><th>12th %</th><td>{{ p.twelfth_pct }}</td></tr>
+        <tr><th>Backlogs</th><td>{{ p.backlogs }}</td></tr>
+        <tr><th>Projects</th><td>{{ p.projects }}</td></tr>
+        <tr><th>Internships</th><td>{{ p.internships }}</td></tr>
+        <tr><th>Skills (recognised)</th><td>{{ p.skills | join(', ') if p.skills else 'None recognised' }}</td></tr>
+        <tr><th>Target role</th><td>{{ p.target_role }}</td></tr>
+      </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>What the result means</h3>
+      <p>{{ explanation }}</p>
+      {% if factors %}
+      <p><strong>Inputs with the largest influence on this estimate:</strong></p>
+      <ul>
+        {% for f in factors %}<li>{{ f.name }} {{ f.direction }} the estimate (relative to the average training profile).</li>{% endfor %}
+      </ul>
+      <p class="hint">Based on the Logistic Regression coefficients; it describes the model's behaviour, not real-world cause and effect.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <a class="btn btn-purple" href="{{ url_for('simulator', rec_id=p.id) }}">Run What-If Simulation</a>
+    <a class="btn" href="{{ url_for('readiness', rec_id=p.id) }}">Role-Based Readiness Analysis</a>
+    <a class="btn btn-outline" href="{{ url_for('index') }}">Back to Home</a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>Placement Predictor</h1>
+    <p>Enter your academic profile and skills to get a machine-learning estimate of your placement outcome, check your readiness for a job role, and explore what-if improvements.</p>
+    <a class="btn btn-light" href="{{ url_for('predict') }}">Start Prediction</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <h2>What you can do</h2>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="feature-icon" aria-hidden="true">&#128202;</div>
+        <h3>Placement Prediction</h3>
+        <p>A Logistic Regression model, trained by <code>train_model.py</code>, estimates whether a profile is likely to be Placed or Not Placed, with a probability.</p>
+      </div>
+      <div class="card">
+        <div class="feature-icon purple" aria-hidden="true">&#127919;</div>
+        <h3>Role Readiness</h3>
+        <p>Compare your skills with a transparent checklist for Python Developer, Data Analyst or Web Developer and get learning tips and project ideas.</p>
+      </div>
+      <div class="card">
+        <div class="feature-icon" aria-hidden="true">&#128260;</div>
+        <h3>What-If Simulation</h3>
+        <p>Change CGPA, projects, internships, backlogs or skills and see original vs hypothetical results side by side, recalculated by the real model.</p>
+      </div>
+    </div>
+    <div class="disclaimer">
+      <strong>Please note:</strong> this project uses a clearly labelled <em>synthetic</em> dataset, not real student placement records. Results are demonstrations of the technique, not evidence of real-world accuracy or a promise of employment.
+    </div>
+  </div>
+</section>
+{% endblock %}

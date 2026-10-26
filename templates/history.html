@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}History{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Prediction History</h1>
+    <p>The 50 most recent saved predictions (stored locally in SQLite).</p>
+  </div>
+  <div class="card">
+    {% if rows %}
+    <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Outcome</th><th>Probability</th><th>Source</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.id }}</td>
+        <td>{{ r.student_name }}</td>
+        <td>{{ r.target_role }}</td>
+        <td><span class="badge {{ 'badge-placed' if r.predicted_class == 'Placed' else 'badge-not' }}">{{ r.predicted_class }}</span></td>
+        <td>{% if r.probability_placed is not none %}{{ '%.1f' % (r.probability_placed * 100) }}%{% else %}&ndash;{% endif %}</td>
+        <td>{{ r.source }}</td>
+        <td>{{ r.created_at }}</td>
+        <td><a href="{{ url_for('result', rec_id=r.id) }}">View</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p>No predictions saved yet. <a href="{{ url_for('predict') }}">Make your first prediction</a>.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

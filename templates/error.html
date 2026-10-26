@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title"><h1>{{ title }}</h1></div>
+  <div class="alert {{ 'alert-warning' if setup else 'alert-error' }}" role="alert">
+    <p>{{ message }}</p>
+    {% if setup %}
+    <p><strong>How to fix:</strong></p>
+    <ol>
+      <li>Open a terminal in the project folder (with your virtual environment activated).</li>
+      <li>Run <code>python train_model.py</code>.</li>
+      <li>Restart the app with <code>python app.py</code> and try again.</li>
+    </ol>
+    {% endif %}
+  </div>
+  <div class="btn-row"><a class="btn" href="{{ url_for('index') }}">Back to Home</a></div>
+</div>
+{% endblock %}

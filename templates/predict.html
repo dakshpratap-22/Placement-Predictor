@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Student Profile{% endblock %}
+{% macro field_error(name) %}{% if errors.get(name) %}<div class="field-error" role="alert">{{ errors[name] }}</div>{% endif %}{% endmacro %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Student Profile</h1>
+    <p>Fill in your details. All fields except skills are required.</p>
+  </div>
+
+  {% if errors %}
+  <div class="alert alert-error" role="alert">
+    <strong>Please fix the following:</strong>
+    <ul>{% for k, m in errors.items() %}<li>{{ m }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('predict') }}" class="card" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="form-grid">
+      <div class="field full {{ 'has-error' if errors.get('student_name') }}">
+        <label for="student_name">Student name</label>
+        <input id="student_name" name="student_name" type="text" maxlength="60" value="{{ values.get('student_name', '') }}" required>
+        {{ field_error('student_name') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('cgpa') }}">
+        <label for="cgpa">CGPA (0&ndash;10)</label>
+        <input id="cgpa" name="cgpa" type="number" step="0.01" min="0" max="10" value="{{ values.get('cgpa', '') }}" required>
+        {{ field_error('cgpa') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('tenth_pct') }}">
+        <label for="tenth_pct">10th percentage</label>
+        <input id="tenth_pct" name="tenth_pct" type="number" step="0.1" min="0" max="100" value="{{ values.get('tenth_pct', '') }}" required>
+        {{ field_error('tenth_pct') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('twelfth_pct') }}">
+        <label for="twelfth_pct">12th percentage</label>
+        <input id="twelfth_pct" name="twelfth_pct" type="number" step="0.1" min="0" max="100" value="{{ values.get('twelfth_pct', '') }}" required>
+        {{ field_error('twelfth_pct') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('backlogs') }}">
+        <label for="backlogs">Number of backlogs</label>
+        <input id="backlogs" name="backlogs" type="number" step="1" min="0" value="{{ values.get('backlogs', '') }}" required>
+        {{ field_error('backlogs') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('projects') }}">
+        <label for="projects">Number of projects</label>
+        <input id="projects" name="projects" type="number" step="1" min="0" value="{{ values.get('projects', '') }}" required>
+        {{ field_error('projects') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('internships') }}">
+        <label for="internships">Number of internships</label>
+        <input id="internships" name="internships" type="number" step="1" min="0" value="{{ values.get('internships', '') }}" required>
+        {{ field_error('internships') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('target_role') }}">
+        <label for="target_role">Target job role</label>
+        <select id="target_role" name="target_role" required>
+          <option value="">-- choose a role --</option>
+          {% for r in roles %}<option value="{{ r }}" {{ 'selected' if values.get('target_role') == r }}>{{ r }}</option>{% endfor %}
+        </select>
+        {{ field_error('target_role') }}
+      </div>
+      <div class="field full {{ 'has-error' if errors.get('skills') }}">
+        <label for="skills">Technical skills</label>
+        <textarea id="skills" name="skills" rows="2" maxlength="300" placeholder="e.g. Python, SQL, Git, HTML">{{ values.get('skills', '') }}</textarea>
+        <div class="hint">Separate skills with commas. Recognised skills: Python, SQL, Git, Problem Solving, Excel, Data Visualization, HTML, CSS, JavaScript, Flask, Machine Learning, Communication, Java, C/C++.</div>
+        {{ field_error('skills') }}
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" type="submit">Predict my placement outcome</button>
+      <a class="btn btn-outline" href="{{ url_for('index') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}What-If Simulator{% endblock %}
+{% macro field_error(name) %}{% if errors.get(name) %}<div class="field-error" role="alert">{{ errors[name] }}</div>{% endif %}{% endmacro %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>What-If Placement Simulator</h1>
+    <p>Change values below to see how the same trained model responds. Nothing here changes {{ p.student_name }}'s saved record.</p>
+  </div>
+
+  {% if errors %}
+  <div class="alert alert-error" role="alert">
+    <strong>Please fix the following:</strong>
+    <ul>{% for k, m in errors.items() %}<li>{{ m }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-2">
+    <div class="card">
+      <h3>Original profile (saved)</h3>
+      <div class="table-wrap">
+      <table class="data">
+        <tr><th>CGPA</th><td>{{ p.cgpa }}</td></tr>
+        <tr><th>10th %</th><td>{{ p.tenth_pct }}</td></tr>
+        <tr><th>12th %</th><td>{{ p.twelfth_pct }}</td></tr>
+        <tr><th>Backlogs</th><td>{{ p.backlogs }}</td></tr>
+        <tr><th>Projects</th><td>{{ p.projects }}</td></tr>
+        <tr><th>Internships</th><td>{{ p.internships }}</td></tr>
+        <tr><th>Skills</th><td>{{ p.skills | join(', ') if p.skills else 'None recognised' }}</td></tr>
+      </table>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('simulator', rec_id=p.id) }}" class="card" novalidate>
+      <h3>Hypothetical profile</h3>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="form-grid">
+        <div class="field {{ 'has-error' if errors.get('cgpa') }}">
+          <label for="cgpa">CGPA</label>
+          <input id="cgpa" name="cgpa" type="number" step="0.01" min="0" max="10" value="{{ values.get('cgpa', '') }}">
+          {{ field_error('cgpa') }}
+        </div>
+        <div class="field {{ 'has-error' if errors.get('tenth_pct') }}">
+          <label for="tenth_pct">10th %</label>
+          <input id="tenth_pct" name="tenth_pct" type="number" step="0.1" min="0" max="100" value="{{ values.get('tenth_pct', '') }}">
+          {{ field_error('tenth_pct') }}
+        </div>
+        <div class="field {{ 'has-error' if errors.get('twelfth_pct') }}">
+          <label for="twelfth_pct">12th %</label>
+          <input id="twelfth_pct" name="twelfth_pct" type="number" step="0.1" min="0" max="100" value="{{ values.get('twelfth_pct', '') }}">
+          {{ field_error('twelfth_pct') }}
+        </div>
+        <div class="field {{ 'has-error' if errors.get('backlogs') }}">
+          <label for="backlogs">Backlogs</label>
+          <input id="backlogs" name="backlogs" type="number" step="1" min="0" value="{{ values.get('backlogs', '') }}">
+          {{ field_error('backlogs') }}
+        </div>
+        <div class="field {{ 'has-error' if errors.get('projects') }}">
+          <label for="projects">Projects</label>
+          <input id="projects" name="projects" type="number" step="1" min="0" value="{{ values.get('projects', '') }}">
+          {{ field_error('projects') }}
+        </div>
+        <div class="field {{ 'has-error' if errors.get('internships') }}">
+          <label for="internships">Internships</label>
+          <input id="internships" name="internships" type="number" step="1" min="0" value="{{ values.get('internships', '') }}">
+          {{ field_error('internships') }}
+        </div>
+        <div class="field full {{ 'has-error' if errors.get('skills') }}">
+          <label for="skills">Skills (comma separated)</label>
+          <textarea id="skills" name="skills" rows="2" maxlength="300">{{ values.get('skills', '') }}</textarea>
+          {{ field_error('skills') }}
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-purple" type="submit">Run simulation</button>
+        <a class="btn btn-outline" href="{{ url_for('simulator', rec_id=p.id) }}">Reset to original</a>
+      </div>
+    </form>
+  </div>
+
+  {% if comparison %}
+  {% set c = comparison %}
+  <h2 style="margin-top:2rem">Comparison</h2>
+  <div class="compare">
+    <div class="card">
+      <h3>Original</h3>
+      <span class="badge {{ 'badge-placed' if c.orig.label == pos else 'badge-not' }}">{{ c.orig.label }}</span>
+      {% if c.orig.supports_probability %}
+      <div class="big-number">{{ '%.1f' % (c.orig.probability_placed * 100) }}%</div>
+      <div class="hint">estimated probability of "Placed"</div>
+      <div class="meter"><div style="width: {{ '%.1f' % (c.orig.probability_placed * 100) }}%"></div></div>
+      {% endif %}
+    </div>
+    <div class="card hypo">
+      <h3>Hypothetical</h3>
+      <span class="badge {{ 'badge-placed' if c.hypo.label == pos else 'badge-not' }}">{{ c.hypo.label }}</span>
+      {% if c.hypo.supports_probability %}
+      <div class="big-number">{{ '%.1f' % (c.hypo.probability_placed * 100) }}%</div>
+      <div class="hint">estimated probability of "Placed"</div>
+      <div class="meter purple"><div style="width: {{ '%.1f' % (c.hypo.probability_placed * 100) }}%"></div></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <h3>What changed</h3>
+    {% if c.changes %}
+      <ul>{% for ch in c.changes %}<li>{{ ch }}</li>{% endfor %}</ul>
+    {% else %}
+      <p>No inputs were changed, so both profiles are identical.</p>
+    {% endif %}
+    {% if c.unknown %}
+      <p class="hint">Not recognised as catalogue skills (ignored by the model): {{ c.unknown | join(', ') }}</p>
+    {% endif %}
+
+    {% if c.diff is not none %}
+      {% if c.diff > 0.05 %}
+        <p class="delta-up">Estimated probability changed by +{{ '%.1f' % c.diff }} percentage points.</p>
+      {% elif c.diff < -0.05 %}
+        <p class="delta-down">Estimated probability changed by {{ '%.1f' % c.diff }} percentage points.</p>
+      {% else %}
+        <p class="delta-flat">The estimated probability is unchanged (difference under 0.1 percentage points).</p>
+      {% endif %}
+    {% endif %}
+    <p>
+      {% if c.class_changed %}The predicted class changed from <strong>{{ c.orig.label }}</strong> to <strong>{{ c.hypo.label }}</strong>.
+      {% else %}The predicted class stayed <strong>{{ c.orig.label }}</strong>.{% endif %}
+    </p>
+    <p class="hint">Both results come from the same trained model. The model may respond in ways that differ from real hiring, so treat this as an exploration, not advice.</p>
+  </div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <h3>Optional: save this hypothetical profile</h3>
+    <p>Hypothetical profiles are <strong>not</strong> saved automatically. If you want a record, you can store it as a separate entry; your original record stays unchanged.</p>
+    <form method="post" action="{{ url_for('simulator_save', rec_id=p.id) }}">
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      {% for k in ['cgpa','tenth_pct','twelfth_pct','backlogs','projects','internships','skills'] %}
+      <input type="hidden" name="{{ k }}" value="{{ values.get(k, '') }}">
+      {% endfor %}
+      <button class="btn btn-outline" type="submit">Save as a separate what-if record</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="btn-row">
+    <a class="btn btn-outline" href="{{ url_for('result', rec_id=p.id) }}">Back to Result</a>
+    <a class="btn" href="{{ url_for('readiness', rec_id=p.id) }}">Role Readiness</a>
+    <a class="btn btn-outline" href="{{ url_for('index') }}">Home</a>
+  </div>
+</div>
+{% endblock %}

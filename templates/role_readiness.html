@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Role Readiness{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Role-Based Readiness: {{ r.role }}</h1>
+    <p>Skills entered by {{ p.student_name }} compared with a project-defined checklist.</p>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Skill checklist coverage is not placement probability.</strong>
+    This percentage only counts how many checklist skills you listed. The checklist is an illustrative example, not a universal hiring requirement, and the percentage is not a validated employability score.
+    Your model-based placement estimate is on the <a href="{{ url_for('result', rec_id=p.id) }}">result page</a>.
+  </div>
+
+  <div class="card">
+    <h3>Skill checklist coverage</h3>
+    <div class="big-number">{{ r.percent }}%</div>
+    <div class="meter purple" role="img" aria-label="Skill checklist coverage {{ r.percent }} percent"><div style="width: {{ r.percent }}%"></div></div>
+    <p class="hint">{{ r.matched | length }} of {{ r.required | length }} checklist skills entered.</p>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:1.25rem">
+    <div class="card">
+      <h3>Matched skills</h3>
+      {% if r.matched %}
+      <div class="chips">{% for s in r.matched %}<span class="chip chip-ok">&#10003; {{ s }}</span>{% endfor %}</div>
+      {% else %}<p>No checklist skills entered yet.</p>{% endif %}
+    </div>
+    <div class="card">
+      <h3>Skills not yet entered or demonstrated</h3>
+      {% if r.missing %}
+      <div class="chips">{% for s in r.missing %}<span class="chip chip-miss">{{ s }}</span>{% endfor %}</div>
+      {% else %}<p>You listed every skill on this checklist. Keep building real projects to demonstrate them.</p>{% endif %}
+    </div>
+  </div>
+
+  {% if r.tips %}
+  <div class="card" style="margin-top:1.25rem">
+    <h3>How to learn the missing skills</h3>
+    <ul>{% for s, tip in r.tips %}<li><strong>{{ s }}:</strong> {{ tip }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <div class="card" style="margin-top:1.25rem">
+    <h3>Project ideas for {{ r.role }} practice</h3>
+    <ul>{% for idea in r.ideas %}<li>{{ idea }}</li>{% endfor %}</ul>
+  </div>
+
+  <div class="card" style="margin-top:1.25rem">
+    <h3>Full checklist for this role</h3>
+    <div class="chips">{% for s in r.required %}<span class="chip chip-neutral">{{ s }}</span>{% endfor %}</div>
+    <p class="hint">Checklists are defined in <code>roles_config.py</code> and can be edited.</p>
+  </div>
+
+  <div class="btn-row">
+    <a class="btn btn-purple" href="{{ url_for('simulator', rec_id=p.id) }}">Run What-If Simulation</a>
+    <a class="btn btn-outline" href="{{ url_for('result', rec_id=p.id) }}">Back to Result</a>
+    <a class="btn btn-outline" href="{{ url_for('index') }}">Home</a>
+  </div>
+</div>
+{% endblock %}

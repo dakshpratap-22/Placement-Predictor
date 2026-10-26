@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Placement Predictor{% endblock %} | Placement Predictor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="navbar">
+    <div class="container">
+      <a class="brand" href="{{ url_for('index') }}">Placement<span>Predictor</span></a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="{{ url_for('index') }}">Home</a>
+        <a href="{{ url_for('predict') }}">Predict</a>
+        <a href="{{ url_for('history') }}">History</a>
+        <a href="{{ url_for('about') }}">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    {% if not model_ready %}
+    <div class="container">
+      <div class="alert alert-warning" role="alert">
+        <strong>Setup needed:</strong> the trained model file was not found. Open a terminal in the project folder and run
+        <code>python train_model.py</code>, then restart the app.
+      </div>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      Placement Predictor &mdash; a college mini-project. Predictions are estimates from a model trained on
+      <strong>synthetic demonstration data</strong> and are not guarantees of employment. &copy; {{ year }}
+    </div>
+  </footer>
+</body>
+</html>
