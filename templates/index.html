@@ -3,9 +3,16 @@
 {% block content %}
 <section class="hero">
   <div class="container">
+    <img class="hero-logo" src="{{ url_for('static', filename='img/favicon.svg') }}" alt="" width="72" height="72">
     <h1>Placement Predictor</h1>
     <p>Enter your academic profile and skills to get a machine-learning estimate of your placement outcome, check your readiness for a job role, and explore what-if improvements.</p>
+    {% if current_user %}
     <a class="btn btn-light" href="{{ url_for('predict') }}">Start Prediction</a>
+    <a class="btn btn-outline-light" href="{{ url_for('dashboard') }}">Open my dashboard</a>
+    {% else %}
+    <a class="btn btn-light" href="{{ url_for('register') }}">Create a free account</a>
+    <a class="btn btn-outline-light" href="{{ url_for('login') }}">Log in</a>
+    {% endif %}
   </div>
 </section>
 
@@ -27,6 +34,23 @@
         <div class="feature-icon" aria-hidden="true">&#128260;</div>
         <h3>What-If Simulation</h3>
         <p>Change CGPA, projects, internships, backlogs or skills and see original vs hypothetical results side by side, recalculated by the real model.</p>
+      </div>
+    </div>
+    <div class="grid grid-3" style="margin-top:1.25rem">
+      <div class="card">
+        <div class="feature-icon" aria-hidden="true">&#128274;</div>
+        <h3>Private accounts</h3>
+        <p>Register and log in to keep your own prediction history. Other users can never see your records.</p>
+      </div>
+      <div class="card">
+        <div class="feature-icon purple" aria-hidden="true">&#128200;</div>
+        <h3>Analytics reports</h3>
+        <p>Charts of your trend, outcome distribution, current-vs-previous comparison, what-if results and role readiness &mdash; all from your saved records.</p>
+      </div>
+      <div class="card">
+        <div class="feature-icon" aria-hidden="true">&#8646;</div>
+        <h3>Compare history</h3>
+        <p>Pick any two saved predictions and see exactly which inputs and model outputs changed.</p>
       </div>
     </div>
     <div class="disclaimer">

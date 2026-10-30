@@ -12,3 +12,5 @@ services:
         generateValue: true
       - key: FLASK_DEBUG
         value: "0"
+      - key: SESSION_COOKIE_SECURE
+        value: "1"

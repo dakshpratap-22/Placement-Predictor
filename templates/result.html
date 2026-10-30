@@ -4,7 +4,13 @@
 <div class="container">
   <div class="page-title">
     <h1>Prediction Result</h1>
-    <p>For {{ p.student_name }} &middot; Target role: {{ p.target_role }} &middot; Saved {{ p.created_at }}</p>
+    <p>For {{ p.student_name }} &middot; Target role: {{ p.target_role }} &middot; Saved {{ p.created_at.replace('T', ' ') }}</p>
+  </div>
+
+  <div class="alert alert-info record-meta" role="note">
+    <strong>Historical record #{{ p.id }}</strong> &mdash; a saved <em>{{ 'what-if (hypothetical) profile' if is_whatif else 'model prediction' }}</em>, not a confirmed placement outcome.
+    Model version: {{ version_text }}.
+    {% if version_differs %}<br>The model has been retrained (or this record pre-dates versioning), so this estimate may not be directly comparable with new predictions. The influence list below uses the current model.{% endif %}
   </div>
 
   <div class="result-banner {{ 'placed' if pred.label == pos else 'not-placed' }}">
@@ -63,7 +69,9 @@
   <div class="btn-row">
     <a class="btn btn-purple" href="{{ url_for('simulator', rec_id=p.id) }}">Run What-If Simulation</a>
     <a class="btn" href="{{ url_for('readiness', rec_id=p.id) }}">Role-Based Readiness Analysis</a>
-    <a class="btn btn-outline" href="{{ url_for('index') }}">Back to Home</a>
+    <a class="btn btn-outline" href="{{ url_for('compare') }}">Compare with another record</a>
+    <a class="btn btn-outline" href="{{ url_for('history') }}">Prediction history</a>
+    <a class="btn btn-outline danger-outline" href="{{ url_for('delete_record', rec_id=p.id) }}">Delete this record</a>
   </div>
 </div>
 {% endblock %}

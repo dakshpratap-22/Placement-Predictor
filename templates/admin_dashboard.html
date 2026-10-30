@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Admin dashboard{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Admin dashboard</h1>
+    <p>Account and usage overview computed from the database. Individual students' academic profiles are not shown here.</p>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Reading these numbers:</strong> &ldquo;Placed / Not Placed&rdquo; counts are <em>model estimates</em> from a synthetic demonstration dataset, not real placement outcomes.
+  </div>
+
+  <div class="grid grid-4 stat-cards">
+    <div class="card stat"><div class="stat-label">Registered users</div><div class="stat-value">{{ stats.cards.total_users }}</div><div class="hint">{{ stats.cards.new_users_7d }} joined in the last 7 days</div></div>
+    <div class="card stat"><div class="stat-label">Predictions run</div><div class="stat-value">{{ stats.cards.predictions }}</div><div class="hint">{{ stats.cards.preds_7d }} in the last 7 days</div></div>
+    <div class="card stat"><div class="stat-label">Saved what-if records</div><div class="stat-value">{{ stats.cards.whatif_records }}</div><div class="hint">{{ stats.cards.simulations }} saved comparisons</div></div>
+    <div class="card stat"><div class="stat-label">Average estimated probability</div><div class="stat-value">{% if stats.cards.avg_prob is not none %}{{ stats.cards.avg_prob }}%{% else %}&ndash;{% endif %}</div><div class="hint">mean of the model&rsquo;s &ldquo;Placed&rdquo; estimates</div></div>
+  </div>
+
+  {% if stats.cards.legacy_rows %}
+  <div class="alert alert-warning">{{ stats.cards.legacy_rows }} record(s) from before accounts existed have no owner. They are kept in the database but are not shown to any user and are not counted above.</div>
+  {% endif %}
+
+  <div class="grid grid-2">
+    <div>
+      <h2 class="section-h">Predictions per day (last {{ days }} days)</h2>
+      <div class="card chart-card">
+        {% if stats.cards.predictions %}
+        <div id="l-daily"></div>
+        <canvas id="c-daily" data-height="280" role="img" aria-label="Line chart of the number of predictions run per day"></canvas>
+        <div id="t-daily"></div>
+        {% else %}<p class="empty-inline">No predictions have been run yet.</p>{% endif %}
+      </div>
+    </div>
+    <div>
+      <h2 class="section-h">Model-estimated outcomes</h2>
+      <div class="card chart-card">
+        {% if stats.cards.predictions %}
+        <div id="l-outcome"></div>
+        <canvas id="c-outcome" data-height="280" role="img" aria-label="Doughnut chart of predicted classes across all users"></canvas>
+        <div id="t-outcome"></div>
+        {% else %}<p class="empty-inline">No predictions have been run yet.</p>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-h">Target job roles</h2>
+  <div class="card">
+    <p class="hint">How many predictions chose each role. Roles are defined in <code>roles_config.py</code>.</p>
+    <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Role</th><th>Checklist skills</th><th>Predictions</th><th><span class="sr-only">Share of the most-used role</span></th></tr></thead>
+      <tbody>
+      {% for r in stats.roles %}
+      <tr>
+        <td>{{ r.role }}{% if not r.configured %} <span class="badge badge-neutral">no longer in roles_config.py</span>{% endif %}</td>
+        <td class="small">{{ r.skills|join(', ') if r.skills else '–' }}</td>
+        <td>{{ r.count }}</td>
+        <td style="min-width:120px"><div class="meter" role="img" aria-label="{{ r.share }} percent of the most used role"><div style="width: {{ r.share }}%"></div></div></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <h2 class="section-h">Model</h2>
+  <div class="card">
+    {% if stats.model %}
+    <ul>
+      <li>Model: {{ stats.model.name }}</li>
+      <li>Trained at: {{ stats.model.trained_at }}</li>
+      <li>Data: {{ stats.model.data_source }}</li>
+      {% for k, v in stats.model.metrics.items() if v is number %}<li>{{ k|replace('_', ' ')|capitalize }}: {{ v if v is integer else '%.3f' % v }}</li>{% endfor %}
+    </ul>
+    <p class="hint">Metrics describe fit to synthetic data and say nothing about real-world accuracy.</p>
+    {% else %}
+    <p class="empty-inline">The model file is not available. Run <code>python train_model.py</code>.</p>
+    {% endif %}
+  </div>
+
+  <h2 class="section-h">Users</h2>
+  <form method="get" action="{{ url_for('admin.dashboard') }}" class="card filter-bar">
+    <div class="field"><label for="q">Search name or email</label><input id="q" name="q" type="search" maxlength="80" value="{{ q }}"></div>
+    <div class="btn-row tight"><button class="btn btn-sm" type="submit">Search</button><a class="btn btn-sm btn-outline" href="{{ url_for('admin.dashboard') }}">Reset</a></div>
+  </form>
+  <div class="card">
+    {% if users %}
+    <p class="hint">Showing {{ users|length }} of {{ total_users }} account(s){% if total_users > shown_limit and not q %} (newest {{ shown_limit }}){% endif %}.</p>
+    <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Joined</th><th>Predictions</th><th>Last activity</th><th>Actions</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+      <tr>
+        <td>#{{ u.id }}</td>
+        <td>{{ u.name }}{% if u.is_admin %} <span class="badge badge-neutral">admin</span>{% endif %}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ u.created_at.replace('T', ' ')[:16] }}</td>
+        <td>{{ u.predictions }}</td>
+        <td>{% if u.last_activity %}{{ u.last_activity.replace('T', ' ')[:16] }}{% else %}&ndash;{% endif %}</td>
+        <td class="actions">{% if not u.is_admin and u.id != current_user['id'] %}<a class="danger-link" href="{{ url_for('admin.delete_user', user_id=u.id) }}">Delete</a>{% else %}&ndash;{% endif %}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}
+    <p class="empty-inline">No users match{% if q %} &ldquo;{{ q }}&rdquo;{% endif %}.</p>
+    {% endif %}
+  </div>
+</div>
+<script type="application/json" id="chart-data">{{ chart | tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin-charts.js') }}"></script>
+{% endblock %}

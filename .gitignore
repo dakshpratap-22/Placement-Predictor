@@ -5,6 +5,9 @@ __pycache__/
 models/*.joblib
 models/metrics.json
 instance/*.db
+instance/*.db-*
+instance/*.bak*
+instance/.secret_key
 .env
 .vscode/
 .DS_Store

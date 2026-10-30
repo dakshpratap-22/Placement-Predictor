@@ -1,35 +1,79 @@
 {% extends "base.html" %}
-{% block title %}History{% endblock %}
+{% block title %}Prediction History{% endblock %}
 {% block content %}
 <div class="container">
   <div class="page-title">
     <h1>Prediction History</h1>
-    <p>The 50 most recent saved predictions (stored locally in SQLite).</p>
+    <p>Your saved <strong>historical model predictions</strong>. A changed prediction does not prove that real placement prospects changed.</p>
   </div>
-  <div class="card">
+
+  {% if not has_any %}
+  <div class="card empty-state">
+    <h2>No predictions saved yet</h2>
+    <p>Your history will appear here after you run a prediction.</p>
+    <a class="btn" href="{{ url_for('predict') }}">Make your first prediction</a>
+  </div>
+  {% else %}
+  <form class="card filter-bar" method="get" action="{{ url_for('history') }}">
+    <div class="field"><label for="from">From date</label><input id="from" name="from" type="date" value="{{ f_from }}"></div>
+    <div class="field"><label for="to">To date</label><input id="to" name="to" type="date" value="{{ f_to }}"></div>
+    <div class="field">
+      <label for="sort">Sort by</label>
+      <select id="sort" name="sort">
+        {% for k, label in sort_labels.items() %}<option value="{{ k }}" {{ 'selected' if sort == k }}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field check-field">
+      <label><input type="checkbox" name="whatif" value="1" {{ 'checked' if include_whatif }}> Include saved what-if records</label>
+    </div>
+    <div class="btn-row tight">
+      <button class="btn btn-sm" type="submit">Apply filters</button>
+      <a class="btn btn-sm btn-outline" href="{{ url_for('history') }}">Reset</a>
+    </div>
+  </form>
+
+  <form method="get" action="{{ url_for('compare') }}" class="card">
+    <div class="card-head">
+      <h2>{{ total }} record{{ '' if total == 1 else 's' }}{% if total > rows|length %} (showing the first {{ rows|length }}){% endif %}</h2>
+      <div class="compare-actions">
+        <span id="compare-hint" class="hint" aria-live="polite"></span>
+        <button id="compare-btn" class="btn btn-sm btn-purple" type="submit" disabled>Compare selected</button>
+        <a class="btn btn-sm btn-outline" href="{{ url_for('export_csv', **({'from': f_from, 'to': f_to, 'whatif': '1' if include_whatif else ''} )) }}">Export CSV</a>
+      </div>
+    </div>
     {% if rows %}
+    <p class="hint">Tick two records, then press &ldquo;Compare selected&rdquo;.</p>
     <div class="table-wrap">
     <table class="data">
-      <thead><tr><th>ID</th><th>Name</th><th>Role</th><th>Outcome</th><th>Probability</th><th>Source</th><th>Date</th><th></th></tr></thead>
+      <thead><tr>
+        <th><span class="sr-only">Select</span></th><th>ID</th><th>Saved</th><th>Name</th><th>Role</th>
+        <th>Model prediction</th><th>Probability</th><th>Model version</th><th>Type</th><th>Actions</th>
+      </tr></thead>
       <tbody>
       {% for r in rows %}
       <tr>
-        <td>{{ r.id }}</td>
+        <td><input type="checkbox" name="ids" value="{{ r.id }}" aria-label="Select record {{ r.id }} for comparison"></td>
+        <td>#{{ r.id }}</td>
+        <td>{{ r.created_at.replace('T', ' ')[:16] }}</td>
         <td>{{ r.student_name }}</td>
         <td>{{ r.target_role }}</td>
         <td><span class="badge {{ 'badge-placed' if r.predicted_class == 'Placed' else 'badge-not' }}">{{ r.predicted_class }}</span></td>
         <td>{% if r.probability_placed is not none %}{{ '%.1f' % (r.probability_placed * 100) }}%{% else %}&ndash;{% endif %}</td>
-        <td>{{ r.source }}</td>
-        <td>{{ r.created_at }}</td>
-        <td><a href="{{ url_for('result', rec_id=r.id) }}">View</a></td>
+        <td class="small">{{ r.model_version or 'unknown' }}</td>
+        <td>{% if r.source == 'prediction' %}Prediction{% else %}<span class="badge badge-neutral">What-if</span>{% endif %}</td>
+        <td class="actions">
+          <a href="{{ url_for('result', rec_id=r.id) }}">Open report</a>
+          <a href="{{ url_for('delete_record', rec_id=r.id) }}" class="danger-link">Delete</a>
+        </td>
       </tr>
       {% endfor %}
       </tbody>
     </table>
     </div>
     {% else %}
-    <p>No predictions saved yet. <a href="{{ url_for('predict') }}">Make your first prediction</a>.</p>
+    <p>No records match these filters. <a href="{{ url_for('history') }}">Reset filters</a>.</p>
     {% endif %}
-  </div>
+  </form>
+  {% endif %}
 </div>
 {% endblock %}

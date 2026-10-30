@@ -1,4 +1,5 @@
 Flask>=3.0
+Werkzeug>=3.0
 scikit-learn>=1.4
 numpy>=1.26
 joblib>=1.3

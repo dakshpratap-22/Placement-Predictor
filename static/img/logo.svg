@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" role="img" aria-labelledby="t">
+  <title id="t">Placement Predictor</title>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f6fed"/>
+      <stop offset="1" stop-color="#6d4fd6"/>
+    </linearGradient>
+  </defs>
+  <!-- Mark: rounded tile, rising analytics bars, upward trend line ending in an AI "node", graduation-cap peak -->
+  <rect x="2" y="2" width="60" height="60" rx="15" fill="url(#g)"/>
+  <rect x="12" y="38" width="8" height="14" rx="2" fill="#fff" opacity=".55"/>
+  <rect x="24" y="31" width="8" height="21" rx="2" fill="#fff" opacity=".75"/>
+  <rect x="36" y="23" width="8" height="29" rx="2" fill="#fff"/>
+  <path d="M11 32 L26 22 L38 27 L51 12" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="51" cy="12" r="4.6" fill="#fff"/>
+  <circle cx="51" cy="12" r="2" fill="#6d4fd6"/>
+  <circle cx="26" cy="22" r="2.4" fill="#fff"/>
+  <circle cx="11" cy="32" r="2.4" fill="#fff"/>
+  <!-- Wordmark -->
+  <text x="74" y="29" font-family="'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif" font-size="22" font-weight="700" fill="#0f1f3d">Placement</text>
+  <text x="74" y="53" font-family="'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif" font-size="22" font-weight="700" fill="#6d4fd6">Predictor</text>
+</svg>

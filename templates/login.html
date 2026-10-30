@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% macro field_error(name) %}{% if errors.get(name) %}<div class="field-error" id="{{ name }}-error" role="alert">{{ errors[name] }}</div>{% endif %}{% endmacro %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card card">
+    <img class="auth-logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="Placement Predictor" width="220" height="54">
+    <h1>Welcome back</h1>
+    <p class="muted">Log in to see your predictions, history and reports.</p>
+
+    <form method="post" action="{{ url_for('login') }}" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="field {{ 'has-error' if errors.get('email') }}">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="120" required autofocus
+               value="{{ values.get('email', '') }}" {% if errors.get('email') %}aria-describedby="email-error" aria-invalid="true"{% endif %}>
+        {{ field_error('email') }}
+      </div>
+      <div class="field {{ 'has-error' if errors.get('password') }}">
+        <label for="password">Password</label>
+        <div class="input-with-btn">
+          <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required
+                 {% if errors.get('password') %}aria-describedby="password-error" aria-invalid="true"{% endif %}>
+          <button type="button" class="toggle-pw" data-toggle-password="#password" aria-pressed="false" aria-label="Show password" hidden>Show</button>
+        </div>
+        {{ field_error('password') }}
+      </div>
+      <button class="btn btn-block" type="submit">Log in</button>
+    </form>
+    <p class="auth-switch">New here? <a href="{{ url_for('register') }}">Create an account</a></p>
+  </div>
+</div>
+{% endblock %}

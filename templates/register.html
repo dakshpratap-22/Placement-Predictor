@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Create account{% endblock %}
+{% macro field_error(name) %}{% if errors.get(name) %}<div class="field-error" id="{{ name }}-error" role="alert">{{ errors[name] }}</div>{% endif %}{% endmacro %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card card">
+    <img class="auth-logo" src="{{ url_for('static', filename='img/logo.svg') }}" alt="Placement Predictor" width="220" height="54">
+    <h1>Create your account</h1>
+    <p class="muted">Your predictions and reports are private to your account.</p>
+
+    {% if errors %}
+    <div class="alert alert-error" role="alert">
+      <strong>Please fix the following:</strong>
+      <ul>{% for k, m in errors.items() %}<li>{{ m }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{{ url_for('register') }}" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <div class="field {{ 'has-error' if errors.get('name') }}">
+        <label for="name">Full name</label>
+        <input id="name" name="name" type="text" autocomplete="name" maxlength="60" required autofocus value="{{ values.get('name', '') }}">
+      </div>
+      <div class="field {{ 'has-error' if errors.get('email') }}">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" maxlength="120" required value="{{ values.get('email', '') }}">
+      </div>
+      <div class="field {{ 'has-error' if errors.get('password') }}">
+        <label for="password">Password</label>
+        <div class="input-with-btn">
+          <input id="password" name="password" type="password" autocomplete="new-password" maxlength="128" required aria-describedby="pw-hint">
+          <button type="button" class="toggle-pw" data-toggle-password="#password" aria-pressed="false" aria-label="Show password" hidden>Show</button>
+        </div>
+        <div class="hint" id="pw-hint">At least 8 characters, with at least one letter and one number.</div>
+      </div>
+      <div class="field {{ 'has-error' if errors.get('confirm_password') }}">
+        <label for="confirm_password">Confirm password</label>
+        <div class="input-with-btn">
+          <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" maxlength="128" required>
+          <button type="button" class="toggle-pw" data-toggle-password="#confirm_password" aria-pressed="false" aria-label="Show password" hidden>Show</button>
+        </div>
+      </div>
+      <button class="btn btn-block" type="submit">Create account</button>
+    </form>
+    <p class="auth-switch">Already registered? <a href="{{ url_for('login') }}">Log in</a></p>
+  </div>
+</div>
+{% endblock %}

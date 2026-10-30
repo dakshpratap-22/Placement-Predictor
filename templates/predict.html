@@ -17,6 +17,7 @@
 
   <form method="post" action="{{ url_for('predict') }}" class="card" novalidate>
     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <input type="hidden" name="_nonce" value="{{ form_nonce() }}">
     <div class="form-grid">
       <div class="field full {{ 'has-error' if errors.get('student_name') }}">
         <label for="student_name">Student name</label>
@@ -70,7 +71,7 @@
     </div>
     <div class="btn-row">
       <button class="btn" type="submit">Predict my placement outcome</button>
-      <a class="btn btn-outline" href="{{ url_for('index') }}">Cancel</a>
+      <a class="btn btn-outline" href="{{ url_for('dashboard') }}">Cancel</a>
     </div>
   </form>
 </div>
