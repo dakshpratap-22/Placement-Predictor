@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Hello, {{ current_user['name'].split(' ')[0] }}</h1>
+    <p>Your private dashboard. Everything below is computed from the predictions saved in your account.</p>
+  </div>
+
+  {% if cards.total_predictions == 0 %}
+  <div class="card empty-state">
+    <h2>No predictions yet</h2>
+    <p>Run your first prediction to start building your history. After that you can compare records, view charts and try what-if scenarios.</p>
+    <a class="btn" href="{{ url_for('predict') }}">Make your first prediction</a>
+  </div>
+  {% else %}
+  <div class="grid grid-4 stat-cards">
+    <div class="card stat"><div class="stat-label">Total predictions</div><div class="stat-value">{{ cards.total_predictions }}</div><div class="hint">model predictions you ran</div></div>
+    <div class="card stat">
+      <div class="stat-label">Latest prediction</div>
+      <div class="stat-value">
+        <span class="badge {{ 'badge-placed' if cards.latest.predicted_class == pos else 'badge-not' }}">{{ cards.latest.predicted_class }}</span>
+      </div>
+      <div class="hint">
+        {% if cards.latest.probability_placed is not none %}{{ '%.1f' % (cards.latest.probability_placed * 100) }}% estimated &middot; {% endif %}{{ cards.latest.created_at.replace('T', ' ')[:16] }}
+      </div>
+    </div>
+    <div class="card stat"><div class="stat-label">Historical records</div><div class="stat-value">{{ cards.total_predictions + cards.saved_whatif_records }}</div><div class="hint">incl. {{ cards.saved_whatif_records }} saved what-if</div></div>
+    <div class="card stat"><div class="stat-label">Model versions seen</div><div class="stat-value">{{ cards.model_versions }}</div><div class="hint">{{ 'predictions may not be directly comparable' if cards.model_versions > 1 else 'all records use one version' }}</div></div>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Model estimate, not a confirmed outcome.</strong> Every &ldquo;Placed / Not Placed&rdquo; label here is a machine-learning estimate from a synthetic demonstration dataset. This app does not record real placement results.
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Recent predictions</h2>
+      <a href="{{ url_for('history') }}">View all</a>
+    </div>
+    <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>ID</th><th>Date</th><th>Role</th><th>Model prediction</th><th>Probability</th><th></th></tr></thead>
+      <tbody>
+      {% for r in recent %}
+      <tr>
+        <td>#{{ r.id }}</td>
+        <td>{{ r.created_at.replace('T', ' ')[:16] }}</td>
+        <td>{{ r.target_role }}</td>
+        <td><span class="badge {{ 'badge-placed' if r.predicted_class == pos else 'badge-not' }}">{{ r.predicted_class }}</span>{% if r.source != 'prediction' %} <span class="badge badge-neutral">what-if</span>{% endif %}</td>
+        <td>{% if r.probability_placed is not none %}{{ '%.1f' % (r.probability_placed * 100) }}%{% else %}&ndash;{% endif %}</td>
+        <td><a href="{{ url_for('result', rec_id=r.id) }}">Open</a></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-3 quick-actions">
+    <a class="card action-card" href="{{ url_for('predict') }}"><h3>&#10010; New prediction</h3><p>Enter a profile and run the model.</p></a>
+    <a class="card action-card" href="{{ url_for('reports_page') }}"><h3>&#128200; Analytics reports</h3><p>Trend, distribution, comparisons and readiness charts.</p></a>
+    <a class="card action-card" href="{{ url_for('history') }}"><h3>&#8646; History &amp; compare</h3><p>Filter records and compare any two side by side.</p></a>
+  </div>
+</div>
+{% endblock %}

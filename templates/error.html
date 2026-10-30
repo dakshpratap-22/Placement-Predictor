@@ -14,6 +14,6 @@
     </ol>
     {% endif %}
   </div>
-  <div class="btn-row"><a class="btn" href="{{ url_for('index') }}">Back to Home</a></div>
+  <div class="btn-row"><a class="btn" href="{{ url_for('dashboard') if current_user else url_for('index') }}">{{ 'Back to dashboard' if current_user else 'Back to Home' }}</a></div>
 </div>
 {% endblock %}

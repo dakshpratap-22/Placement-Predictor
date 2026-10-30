@@ -3,39 +3,116 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f1f3d">
   <title>{% block title %}Placement Predictor{% endblock %} | Placement Predictor</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='img/favicon-32.png') }}">
+  <link rel="alternate icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {% block head %}{% endblock %}
 </head>
-<body>
+<body class="{{ 'is-app' if current_user else 'is-public' }}">
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+{% macro flashes() %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="container flash-area" aria-live="polite">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ 'error' if category == 'error' else category if category in ('success', 'info', 'warning') else 'info' }} flash" role="{{ 'alert' if category == 'error' else 'status' }}">
+      <span>{{ message }}</span>
+      <button type="button" class="flash-close" aria-label="Dismiss message">&times;</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+{% endmacro %}
+
+{% macro setup_banner() %}
+  {% if not model_ready %}
+  <div class="container">
+    <div class="alert alert-warning" role="alert">
+      <strong>Setup needed:</strong> the trained model file was not found. Open a terminal in the project folder and run
+      <code>python train_model.py</code>, then restart the app.
+    </div>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% if current_user %}
+  {% set ep = request.endpoint %}
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Dashboard navigation">
+      <a class="sidebar-brand" href="{{ url_for('dashboard') }}">
+        <img src="{{ url_for('static', filename='img/logo-light.svg') }}" alt="Placement Predictor" width="190" height="47">
+      </a>
+      <nav class="side-nav">
+        <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}">&#9638; Dashboard</a>
+        <a href="{{ url_for('predict') }}" class="{{ 'active' if ep == 'predict' }}">&#10010; New prediction</a>
+        <a href="{{ url_for('history') }}" class="{{ 'active' if ep in ('history', 'delete_record') }}">&#9776; Prediction history</a>
+        <a href="{{ url_for('compare') }}" class="{{ 'active' if ep == 'compare' }}">&#8646; Compare records</a>
+        <a href="{{ url_for('reports_page') }}" class="{{ 'active' if ep == 'reports_page' }}">&#128200; Analytics reports</a>
+        <a href="{{ url_for('latest', kind='simulator') }}" class="{{ 'active' if ep in ('simulator', 'simulator_save') }}">&#128260; What-if simulator</a>
+        <a href="{{ url_for('latest', kind='readiness') }}" class="{{ 'active' if ep == 'readiness' }}">&#127919; Role readiness</a>
+        <a href="{{ url_for('about') }}" class="{{ 'active' if ep == 'about' }}">&#9432; About project</a>
+        {% if is_admin %}<a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if ep and ep.startswith('admin.') }}">&#9881; Admin dashboard</a>{% endif %}
+      </nav>
+      <div class="side-user">
+        <div class="side-user-name" title="{{ current_user['email'] }}">{{ current_user['name'] }}</div>
+        <div class="side-user-email">{{ current_user['email'] }}</div>
+        <form method="post" action="{{ url_for('logout') }}">
+          <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-outline-light">Log out</button>
+        </form>
+      </div>
+    </aside>
+    <div class="app-main">
+      <div class="topbar">
+        <button type="button" id="sidebar-toggle" class="icon-btn" aria-controls="sidebar" aria-expanded="false" aria-label="Toggle navigation menu">&#9776;</button>
+        <a href="{{ url_for('dashboard') }}"><img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Placement Predictor" width="150" height="37"></a>
+      </div>
+      <main id="main">
+        {{ flashes() }}
+        {{ setup_banner() }}
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="footer">
+        <div class="container">
+          Placement Predictor &mdash; a college mini-project. Predictions are <strong>model estimates</strong> trained on
+          <strong>synthetic demonstration data</strong>, not confirmed placement outcomes or guarantees of employment. &copy; {{ year }}
+        </div>
+      </footer>
+    </div>
+  </div>
+{% else %}
   <header class="navbar">
     <div class="container">
-      <a class="brand" href="{{ url_for('index') }}">Placement<span>Predictor</span></a>
+      <a class="brand" href="{{ url_for('index') }}" aria-label="Placement Predictor home">
+        <img src="{{ url_for('static', filename='img/logo-light.svg') }}" alt="Placement Predictor" width="170" height="42">
+      </a>
       <nav class="nav-links" aria-label="Main navigation">
         <a href="{{ url_for('index') }}">Home</a>
-        <a href="{{ url_for('predict') }}">Predict</a>
-        <a href="{{ url_for('history') }}">History</a>
         <a href="{{ url_for('about') }}">About</a>
+        <a href="{{ url_for('login') }}">Log in</a>
+        <a class="nav-cta" href="{{ url_for('register') }}">Create account</a>
       </nav>
     </div>
   </header>
-
-  <main>
-    {% if not model_ready %}
-    <div class="container">
-      <div class="alert alert-warning" role="alert">
-        <strong>Setup needed:</strong> the trained model file was not found. Open a terminal in the project folder and run
-        <code>python train_model.py</code>, then restart the app.
-      </div>
-    </div>
-    {% endif %}
-    {% block content %}{% endblock %}
+  <main id="main">
+    {{ flashes() }}
+    {{ setup_banner() }}
+    {{ self.content() }}
   </main>
-
   <footer class="footer">
     <div class="container">
       Placement Predictor &mdash; a college mini-project. Predictions are estimates from a model trained on
       <strong>synthetic demonstration data</strong> and are not guarantees of employment. &copy; {{ year }}
     </div>
   </footer>
+{% endif %}
+  <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

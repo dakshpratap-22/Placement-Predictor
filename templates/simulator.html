@@ -102,6 +102,17 @@
     </div>
   </div>
 
+  {% if chart %}
+  <div class="card chart-card" style="margin-top:1.25rem">
+    <h3>Original vs hypothetical probability</h3>
+    <p class="hint">Both bars are computed by the same trained model for the values entered above (not saved unless you choose to).</p>
+    <div id="l-whatif"></div>
+    <canvas id="c-whatif" data-height="260" role="img" aria-label="Bar chart comparing the original and hypothetical probability of Placed"></canvas>
+    <div id="t-whatif"></div>
+  </div>
+  <script type="application/json" id="chart-data">{{ {"whatif": chart} | tojson }}</script>
+  {% endif %}
+
   <div class="card" style="margin-top:1.25rem">
     <h3>What changed</h3>
     {% if c.changes %}
@@ -131,9 +142,10 @@
 
   <div class="card" style="margin-top:1.25rem">
     <h3>Optional: save this hypothetical profile</h3>
-    <p>Hypothetical profiles are <strong>not</strong> saved automatically. If you want a record, you can store it as a separate entry; your original record stays unchanged.</p>
+    <p>Hypothetical profiles are <strong>not</strong> saved automatically. If you want a record, you can store it as a separate entry (it is linked to this record and appears in your Analytics reports); your original record stays unchanged.</p>
     <form method="post" action="{{ url_for('simulator_save', rec_id=p.id) }}">
       <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+      <input type="hidden" name="_nonce" value="{{ form_nonce() }}">
       {% for k in ['cgpa','tenth_pct','twelfth_pct','backlogs','projects','internships','skills'] %}
       <input type="hidden" name="{{ k }}" value="{{ values.get(k, '') }}">
       {% endfor %}
@@ -145,7 +157,13 @@
   <div class="btn-row">
     <a class="btn btn-outline" href="{{ url_for('result', rec_id=p.id) }}">Back to Result</a>
     <a class="btn" href="{{ url_for('readiness', rec_id=p.id) }}">Role Readiness</a>
-    <a class="btn btn-outline" href="{{ url_for('index') }}">Home</a>
+    <a class="btn btn-outline" href="{{ url_for('dashboard') }}">Dashboard</a>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if chart %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/report-pages.js') }}"></script>
+{% endif %}
 {% endblock %}

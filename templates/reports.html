@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}Analytics Reports{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Analytics Reports</h1>
+    <p>Charts generated from <strong>your saved records</strong> only. Nothing is estimated, smoothed or invented.</p>
+  </div>
+
+  {% if not has_data %}
+  <div class="card empty-state">
+    <h2>No data to chart yet</h2>
+    <p>Reports are built from your saved predictions. To generate the first one, open <em>New prediction</em>, fill in the profile form and submit it. Run another prediction later (for example after updating your CGPA or projects) to see trends and comparisons.</p>
+    <a class="btn" href="{{ url_for('predict') }}">Make your first prediction</a>
+  </div>
+  {% else %}
+
+  <div class="alert alert-info">
+    <strong>Reading these charts:</strong> every &ldquo;Placed / Not Placed&rdquo; value is a <em>model estimate</em> from a synthetic demonstration dataset, not a confirmed placement outcome. A rise or fall between records does not prove that real placement prospects changed. Predictions from different model versions may not be directly comparable.
+  </div>
+
+  <div class="grid grid-4 stat-cards">
+    <div class="card stat"><div class="stat-label">Total predictions</div><div class="stat-value">{{ cards.total_predictions }}</div></div>
+    <div class="card stat"><div class="stat-label">Latest prediction</div>
+      <div class="stat-value">{% if cards.latest %}<span class="badge {{ 'badge-placed' if cards.latest.predicted_class == 'Placed' else 'badge-not' }}">{{ cards.latest.predicted_class }}</span>{% else %}&ndash;{% endif %}</div>
+      <div class="hint">{% if cards.latest and cards.latest.probability_placed is not none %}{{ '%.1f' % (cards.latest.probability_placed * 100) }}% estimated &middot; {% endif %}{% if cards.latest %}{{ cards.latest.created_at.replace('T', ' ')[:16] }}{% endif %}</div></div>
+    <div class="card stat"><div class="stat-label">Records in selected range</div><div class="stat-value">{{ cards.records_in_range }}</div><div class="hint">{{ cards.total_predictions + cards.saved_whatif_records }} historical records in total</div></div>
+    <div class="card stat"><div class="stat-label">Saved what-if comparisons</div><div class="stat-value">{{ cards.saved_simulations }}</div></div>
+  </div>
+
+  <form method="get" action="{{ url_for('reports_page') }}" class="card filter-bar no-print">
+    <div class="field"><label for="from">From date</label><input id="from" name="from" type="date" value="{{ f_from }}"></div>
+    <div class="field"><label for="to">To date</label><input id="to" name="to" type="date" value="{{ f_to }}"></div>
+    <div class="field check-field"><label><input type="checkbox" name="whatif" value="1" {{ 'checked' if include_whatif }}> Include saved what-if records in trend/distribution</label></div>
+    <div class="field">
+      <label for="a">Compare record A</label>
+      <select id="a" name="a"><option value="">Previous (automatic)</option>
+        {% for r in records if r.source == 'prediction' or include_whatif %}<option value="{{ r.id }}" {{ 'selected' if pair_a and r.id == pair_a.id }}>#{{ r.id }} &middot; {{ r.created_at.replace('T', ' ')[:16] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="b">Compare record B</label>
+      <select id="b" name="b"><option value="">Latest (automatic)</option>
+        {% for r in records if r.source == 'prediction' or include_whatif %}<option value="{{ r.id }}" {{ 'selected' if pair_b and r.id == pair_b.id }}>#{{ r.id }} &middot; {{ r.created_at.replace('T', ' ')[:16] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="sim">What-if comparison</label>
+      <select id="sim" name="sim">
+        {% if not sims %}<option value="">None saved yet</option>{% endif %}
+        {% for s in sims %}<option value="{{ s.id }}" {{ 'selected' if sim and s.id == sim.id }}>#{{ s.id }} &middot; {{ s.created_at.replace('T', ' ')[:16] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="rr">Readiness: record</label>
+      <select id="rr" name="rr">
+        {% for r in records if r.source == 'prediction' %}<option value="{{ r.id }}" {{ 'selected' if readiness_base and r.id == readiness_base.id }}>#{{ r.id }} &middot; {{ r.created_at.replace('T', ' ')[:16] }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="role">Readiness: role</label>
+      <select id="role" name="role">
+        {% for ro in roles %}<option value="{{ ro }}" {{ 'selected' if readiness_role == ro }}>{{ ro }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="btn-row tight">
+      <button class="btn btn-sm" type="submit">Update charts</button>
+      <a class="btn btn-sm btn-outline" href="{{ url_for('reports_page') }}">Reset</a>
+      <a class="btn btn-sm btn-outline" href="{{ url_for('export_csv', **({'from': f_from, 'to': f_to, 'whatif': '1' if include_whatif else ''})) }}">Export CSV</a>
+      <button class="btn btn-sm btn-outline" type="button" data-print>Print / save as PDF</button>
+    </div>
+  </form>
+
+  <h2 class="section-h">1. Prediction history trend</h2>
+  <div class="card chart-card">
+    {% if chart.trend.labels %}
+    <p class="hint">Estimated probability of &ldquo;Placed&rdquo; for each saved record, oldest to newest (green = predicted Placed, orange = predicted Not Placed; the model&rsquo;s decision threshold is 50%). {{ 'Only one record is in range, so no trend line can be drawn yet.' if chart.trend.labels|length == 1 }}</p>
+    <div id="l-trend"></div>
+    <canvas id="c-trend" data-height="320" role="img" aria-label="Line chart of the estimated probability of Placed for each saved prediction over time"></canvas>
+    <div id="t-trend"></div>
+    {% else %}
+    <p class="empty-inline">No records fall inside the selected date range.</p>
+    {% endif %}
+  </div>
+
+  <div class="grid grid-2">
+    <div>
+      <h2 class="section-h">2. Prediction outcome distribution</h2>
+      <div class="card chart-card">
+        <p class="hint">How many records the model labelled Placed vs Not Placed (model labels, not real outcomes).</p>
+        <div id="l-dist"></div>
+        <canvas id="c-dist" data-height="280" role="img" aria-label="Doughnut chart of predicted classes"></canvas>
+        <div id="t-dist"></div>
+      </div>
+    </div>
+    <div>
+      <h2 class="section-h">6. Role-based readiness</h2>
+      <div class="card chart-card">
+        {% if chart.readiness %}
+        <p class="hint">{{ chart.readiness.role }} checklist for record #{{ readiness_base.id }}: <strong>{{ chart.readiness.percent }}% checklist coverage</strong> ({{ chart.readiness.matched|length }} of {{ chart.readiness.counts[0] + chart.readiness.counts[1] }} skills listed). This is <strong>not</strong> placement probability.</p>
+        <div id="l-readiness"></div>
+        <canvas id="c-readiness" data-height="240" role="img" aria-label="Doughnut chart of matched and missing checklist skills"></canvas>
+        <div class="chips spaced">
+          {% for s in chart.readiness.matched %}<span class="chip chip-ok">&#10003; {{ s }}</span>{% endfor %}
+          {% for s in chart.readiness.missing %}<span class="chip chip-miss">{{ s }}</span>{% endfor %}
+        </div>
+        <div id="t-readiness"></div>
+        {% else %}
+        <p class="empty-inline">Make a prediction to see role readiness.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <h2 class="section-h">3. Current vs previous prediction</h2>
+  {% if chart.pair %}
+  <div class="card chart-card">
+    <p class="hint">Record #{{ pair_a.id }} ({{ pair_a.created_at.replace('T', ' ')[:16] }}) vs #{{ pair_b.id }} ({{ pair_b.created_at.replace('T', ' ')[:16] }}).
+      {% if cmp.prob_delta is not none %}The model&rsquo;s estimate differs by <strong>{{ '%+.1f' % cmp.prob_delta }}</strong> percentage points.{% endif %}
+      {% if cmp.class_changed %}The predicted class differs ({{ pair_a.predicted_class }} &rarr; {{ pair_b.predicted_class }}).{% endif %}
+      <a href="{{ url_for('compare', a=pair_a.id, b=pair_b.id) }}">Open the full comparison</a>.</p>
+    {% for n in cmp.notes[:-1] %}<div class="alert alert-warning">{{ n }}</div>{% endfor %}
+    <div id="l-pair-prob"></div>
+    <canvas id="c-pair-prob" data-height="260" role="img" aria-label="Bar chart comparing the estimated probability of Placed for two records"></canvas>
+    <div id="t-pair-prob"></div>
+  </div>
+
+  <h2 class="section-h">4. Academic profile comparison</h2>
+  <div class="grid grid-3">
+    {% for g in chart.pair.groups %}
+    <div class="card chart-card">
+      <h3>{{ g.title }}</h3>
+      <div id="l-pair-g{{ loop.index0 }}"></div>
+      <canvas id="c-pair-g{{ loop.index0 }}" data-height="260" role="img" aria-label="Grouped bars: {{ g.title }}"></canvas>
+      <div id="t-pair-g{{ loop.index0 }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card"><p class="empty-inline">You need at least two saved predictions to compare a current and a previous record. Run another prediction to unlock sections 3 and 4.</p></div>
+  {% endif %}
+
+  {% if chart.timeline %}
+  <h2 class="section-h">Academic values over time</h2>
+  <div class="grid grid-3">
+    {% for g in chart.timeline %}
+    <div class="card chart-card">
+      <h3>{{ g.title }}</h3>
+      <div id="l-timeline-g{{ loop.index0 }}"></div>
+      <canvas id="c-timeline-g{{ loop.index0 }}" data-height="240" role="img" aria-label="Line chart: {{ g.title }} over time"></canvas>
+      <div id="t-timeline-g{{ loop.index0 }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <h2 class="section-h">5. What-if simulation comparison</h2>
+  {% if chart.whatif %}
+  <div class="card chart-card">
+    <p class="hint">Saved what-if #{{ sim.id }} ({{ chart.whatif.created_at.replace('T', ' ')[:16] }}, model {{ chart.whatif.version }}). The hypothetical profile is an <strong>exploration</strong>, not a prediction of something that happened.</p>
+    {% if chart.whatif.changes %}<ul>{% for c in chart.whatif.changes %}<li>{{ c }}</li>{% endfor %}</ul>{% endif %}
+    <div id="l-whatif"></div>
+    <canvas id="c-whatif" data-height="260" role="img" aria-label="Bar chart comparing the original and hypothetical probability of Placed"></canvas>
+    <div id="t-whatif"></div>
+  </div>
+  {% else %}
+  <div class="card"><p class="empty-inline">No saved what-if comparison yet. Open the <a href="{{ url_for('latest', kind='simulator') }}">What-if simulator</a>, run a scenario and press &ldquo;Save as a separate what-if record&rdquo; to see it here.</p></div>
+  {% endif %}
+
+  {% endif %}
+</div>
+{% if has_data %}<script type="application/json" id="chart-data">{{ chart | tojson }}</script>{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if has_data %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/report-pages.js') }}"></script>
+{% endif %}
+{% endblock %}

@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import create_app, validate_profile  # noqa: E402
 from ml_utils import MODEL_PATH, parse_skills  # noqa: E402
+from tests.helpers import FAST_HASH, register  # noqa: E402
 
 GOOD = {
     "student_name": "Asha Verma", "cgpa": "7.5", "tenth_pct": "82", "twelfth_pct": "78",
@@ -27,8 +28,10 @@ class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "test.db")
-        self.app = create_app({"TESTING": True, "DATABASE": self.db, "CSRF_ENABLED": False})
+        self.app = create_app({"TESTING": True, "DATABASE": self.db, "CSRF_ENABLED": False,
+                               "PASSWORD_HASH_METHOD": FAST_HASH})
         self.client = self.app.test_client()
+        register(self.client)          # logs in: every route except the public ones needs it
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -55,8 +58,8 @@ class TestPagesAndPrediction(Base):
         self.assertTrue(os.path.exists(MODEL_PATH), "Run python train_model.py first")
 
     def test_static_pages_load(self):
-        for url in ("/", "/predict", "/about", "/history"):
-            self.assertEqual(self.client.get(url).status_code, 200, url)
+        for url in ("/", "/predict", "/about", "/history", "/dashboard", "/reports", "/login"):
+            self.assertEqual(self.client.get(url, follow_redirects=True).status_code, 200, url)
 
     def test_css_loads(self):
         resp = self.client.get("/static/style.css")
@@ -220,8 +223,10 @@ class TestDatabaseHistoryAndSecurity(Base):
         self.assertNotIn("<script>alert(1)</script>", html)
 
     def test_csrf_enforced_when_enabled(self):
-        app = create_app({"TESTING": True, "DATABASE": self.db, "CSRF_ENABLED": True})
+        app = create_app({"TESTING": True, "DATABASE": self.db, "CSRF_ENABLED": True,
+                          "PASSWORD_HASH_METHOD": FAST_HASH})
         c = app.test_client()
+        register(c, email="csrf@example.com", csrf=True)
         self.assertEqual(c.post("/predict", data=GOOD).status_code, 400)
         page = c.get("/predict").get_data(as_text=True)
         token = re.search(r'name="_csrf" value="([0-9a-f]+)"', page).group(1)
@@ -234,9 +239,10 @@ class TestMissingModel(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.app = create_app({
             "TESTING": True, "CSRF_ENABLED": False,
-            "DATABASE": os.path.join(self.tmp.name, "t.db"),
+            "DATABASE": os.path.join(self.tmp.name, "t.db"), "PASSWORD_HASH_METHOD": FAST_HASH,
             "MODEL_PATH": os.path.join(self.tmp.name, "does_not_exist.joblib")})
         self.client = self.app.test_client()
+        register(self.client)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -257,8 +263,11 @@ class TestMissingModel(unittest.TestCase):
         with open(bad, "wb") as f:
             f.write(b"not a model")
         app = create_app({"TESTING": True, "CSRF_ENABLED": False, "MODEL_PATH": bad,
-                          "DATABASE": os.path.join(self.tmp.name, "t2.db")})
-        resp = app.test_client().post("/predict", data=GOOD)
+                          "DATABASE": os.path.join(self.tmp.name, "t2.db"),
+                          "PASSWORD_HASH_METHOD": FAST_HASH})
+        c = app.test_client()
+        register(c)
+        resp = c.post("/predict", data=GOOD)
         self.assertEqual(resp.status_code, 503)
 
 

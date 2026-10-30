@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Compare Records{% endblock %}
+{% block content %}
+<div class="container">
+  <div class="page-title">
+    <h1>Historical Comparison Report</h1>
+    <p>Record #{{ a.id }} (earlier) vs record #{{ b.id }} (later). Both are <strong>saved historical model predictions</strong>.</p>
+  </div>
+
+  {% for n in cmp.notes %}
+  <div class="alert {{ 'alert-warning' if loop.index < cmp.notes|length else 'alert-info' }}" role="note">{{ n }}</div>
+  {% endfor %}
+
+  <form method="get" action="{{ url_for('compare') }}" class="card filter-bar no-print">
+    <div class="field">
+      <label for="a">Record A</label>
+      <select id="a" name="a">
+        {% for r in all_records %}<option value="{{ r.id }}" {{ 'selected' if r.id == a.id }}>#{{ r.id }} &middot; {{ r.created_at.replace('T', ' ')[:16] }} &middot; {{ r.predicted_class }}{{ ' (what-if)' if r.source != 'prediction' }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="b">Record B</label>
+      <select id="b" name="b">
+        {% for r in all_records %}<option value="{{ r.id }}" {{ 'selected' if r.id == b.id }}>#{{ r.id }} &middot; {{ r.created_at.replace('T', ' ')[:16] }} &middot; {{ r.predicted_class }}{{ ' (what-if)' if r.source != 'prediction' }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="btn-row tight"><button class="btn btn-sm" type="submit">Compare</button>
+      <button class="btn btn-sm btn-outline" type="button" data-print>Print / save as PDF</button></div>
+  </form>
+
+  <div class="compare">
+    {% for rec, tag in ((a, 'A &middot; earlier'), (b, 'B &middot; later')) %}
+    <div class="card {{ 'hypo' if loop.last }}">
+      <h3>Record #{{ rec.id }} <span class="tag">{{ tag|safe }}</span></h3>
+      <span class="badge {{ 'badge-placed' if rec.predicted_class == 'Placed' else 'badge-not' }}">{{ rec.predicted_class }}</span>
+      {% if rec.source != 'prediction' %}<span class="badge badge-neutral">saved what-if</span>{% endif %}
+      {% if rec.probability_placed is not none %}
+      <div class="big-number">{{ '%.1f' % (rec.probability_placed * 100) }}%</div>
+      <div class="hint">estimated probability of &ldquo;Placed&rdquo; (model estimate)</div>
+      <div class="meter {{ 'purple' if loop.last }}"><div style="width: {{ '%.1f' % (rec.probability_placed * 100) }}%"></div></div>
+      {% endif %}
+      <p class="hint">Saved {{ rec.created_at.replace('T', ' ')[:16] }}<br>Model version: {{ version_text(rec) }}</p>
+      <a href="{{ url_for('result', rec_id=rec.id) }}">Open full report</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h3>What changed between the two records</h3>
+    {% if cmp.prob_delta is not none %}
+      <p class="{{ 'delta-up' if cmp.prob_delta > 0.05 else 'delta-down' if cmp.prob_delta < -0.05 else 'delta-flat' }}">
+        The model&rsquo;s estimated probability differs by {{ '%+.1f' % cmp.prob_delta }} percentage points
+        (B minus A).
+      </p>
+    {% endif %}
+    <p>{% if cmp.class_changed %}The predicted class differs: <strong>{{ a.predicted_class }}</strong> &rarr; <strong>{{ b.predicted_class }}</strong>.{% else %}The predicted class is the same (<strong>{{ a.predicted_class }}</strong>).{% endif %}</p>
+    {% if cmp.changed_fields %}
+      <p>Changed inputs:</p>
+      <div class="chips">{% for f in cmp.changed_fields %}<span class="chip chip-miss">{{ f }}</span>{% endfor %}</div>
+    {% else %}
+      <p>No inputs differ between these two records.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>Side-by-side inputs</h3>
+    <div class="table-wrap">
+    <table class="data compare-table">
+      <thead><tr><th>Field</th><th>Record #{{ a.id }}</th><th>Record #{{ b.id }}</th><th>Difference</th></tr></thead>
+      <tbody>
+      {% for r in cmp.rows %}
+      <tr class="{{ 'row-changed' if r.changed }}">
+        <th scope="row">{{ r.label }}</th>
+        <td>{{ r.a }}</td><td>{{ r.b }}</td>
+        <td>{% if r.changed %}{% if r.delta is not none %}{{ '%+g' % r.delta }}{% else %}changed{% endif %}{% else %}&ndash;{% endif %}</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <th scope="row">Model prediction</th><td>{{ a.predicted_class }}</td><td>{{ b.predicted_class }}</td><td>{{ 'changed' if cmp.class_changed else '–' }}</td>
+      </tr>
+      <tr>
+        <th scope="row">Probability of Placed</th>
+        <td>{% if a.probability_placed is not none %}{{ '%.1f' % (a.probability_placed * 100) }}%{% else %}&ndash;{% endif %}</td>
+        <td>{% if b.probability_placed is not none %}{{ '%.1f' % (b.probability_placed * 100) }}%{% else %}&ndash;{% endif %}</td>
+        <td>{% if cmp.prob_delta is not none %}{{ '%+.1f' % cmp.prob_delta }} pts{% else %}&ndash;{% endif %}</td>
+      </tr>
+      <tr>
+        <th scope="row">Model version</th><td class="small">{{ version_text(a) }}</td><td class="small">{{ version_text(b) }}</td><td>{{ 'differs' if a.model_version != b.model_version else '–' }}</td>
+      </tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="hint">Highlighted rows are inputs that changed.</p>
+  </div>
+
+  <div class="card">
+    <h3>Role readiness (skill checklist coverage)</h3>
+    <div class="alert alert-info">Checklist coverage counts listed skills against an illustrative role checklist. It is <strong>not</strong> placement probability.</div>
+    <div class="grid grid-2">
+      {% for rec, rd in ((a, cmp.readiness_a), (b, cmp.readiness_b)) %}
+      <div>
+        <h4>#{{ rec.id }} &middot; {{ rd.role }}: {{ rd.percent }}%</h4>
+        <div class="meter purple" role="img" aria-label="Checklist coverage {{ rd.percent }} percent"><div style="width: {{ rd.percent }}%"></div></div>
+        <div class="chips spaced">
+          {% for s in rd.matched %}<span class="chip chip-ok">&#10003; {{ s }}</span>{% endfor %}
+          {% for s in rd.missing %}<span class="chip chip-miss">{{ s }}</span>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <h2 class="section-h">Charts</h2>
+  <div class="grid grid-2">
+    <div class="card chart-card">
+      <h3>Estimated probability: A vs B</h3>
+      <div id="l-pair-prob"></div>
+      <canvas id="c-pair-prob" data-height="280" role="img" aria-label="Bar chart comparing the estimated probability of Placed for the two records"></canvas>
+      <div id="t-pair-prob"></div>
+    </div>
+    {% for i in range(3) %}
+    <div class="card chart-card">
+      <h3>{{ chart.pair.groups[i].title }}</h3>
+      <div id="l-pair-g{{ i }}"></div>
+      <canvas id="c-pair-g{{ i }}" data-height="280" role="img" aria-label="Grouped bar chart of {{ chart.pair.groups[i].title }} for the two records"></canvas>
+      <div id="t-pair-g{{ i }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if chart.timeline %}
+  <h2 class="section-h">How your academic values changed over time</h2>
+  <p class="hint">All of your saved predictions in order of date (what-if records are excluded). Each point is a real saved record; hover for details.</p>
+  <div class="grid grid-2">
+    {% for g in chart.timeline %}
+    <div class="card chart-card">
+      <h3>{{ g.title }}</h3>
+      <div id="l-timeline-g{{ loop.index0 }}"></div>
+      <canvas id="c-timeline-g{{ loop.index0 }}" data-height="260" role="img" aria-label="Line chart: {{ g.title }} over time"></canvas>
+      <div id="t-timeline-g{{ loop.index0 }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="btn-row no-print">
+    <a class="btn btn-outline" href="{{ url_for('history') }}">Back to history</a>
+    <a class="btn btn-outline" href="{{ url_for('reports_page') }}">All analytics</a>
+  </div>
+</div>
+<script type="application/json" id="chart-data">{{ chart | tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script src="{{ url_for('static', filename='js/report-pages.js') }}"></script>
+{% endblock %}
